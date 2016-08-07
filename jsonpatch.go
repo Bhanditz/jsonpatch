@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -106,18 +107,29 @@ func matchesValue(av, bv interface{}) bool {
 	return false
 }
 
-func makePath(path string, newPart interface{}) string {
+func makeIntPath(path string, intPart int) string {
+	return makePath(path, strconv.Itoa(intPart))
+}
+
+func makePath(path string, newPart string) string {
 	if path == "" {
-		return fmt.Sprintf("/%v", newPart)
+		return "/" + newPart
+	} else if strings.HasSuffix(path, "/") {
+		path = path + escapePart(newPart)
 	} else {
-		if strings.HasSuffix(path, "/") {
-			path = path + fmt.Sprintf("%v", newPart)
-		} else {
-			path = path + fmt.Sprintf("/%v", newPart)
-		}
+		path = path + "/" + escapePart(newPart)
 	}
 	return path
 }
+
+func escapePart(part string) string {
+	return strings.Replace(part, "/", "☃", -1)
+}
+
+//TODO apply patch
+// func unescapePart(part string) string {
+// 	return strings.Replace(part, "☃", "/", -1)
+// }
 
 // diff returns the (recursive) difference between a and b as an array of JsonPatchOperations.
 func diff(a, b map[string]interface{}, path string, patch []JsonPatchOperation) ([]JsonPatchOperation, error) {
@@ -174,7 +186,7 @@ func handleValues(av, bv interface{}, p string, patch []JsonPatchOperation) ([]J
 
 		} else {
 			for i, _ := range bt {
-				patch, err = handleValues(at[i], bt[i], makePath(p, i), patch)
+				patch, err = handleValues(at[i], bt[i], makeIntPath(p, i), patch)
 				if err != nil {
 					return nil, err
 				}
@@ -204,7 +216,7 @@ func compareArray(av, bv []interface{}, p string) []JsonPatchOperation {
 			}
 		}
 		if !found {
-			retval = append(retval, NewPatch("remove", makePath(p, i), nil))
+			retval = append(retval, NewPatch("remove", makeIntPath(p, i), nil))
 		}
 	}
 
@@ -216,7 +228,7 @@ func compareArray(av, bv []interface{}, p string) []JsonPatchOperation {
 			}
 		}
 		if !found {
-			retval = append(retval, NewPatch("add", makePath(p, i), v))
+			retval = append(retval, NewPatch("add", makeIntPath(p, i), v))
 		}
 	}
 
